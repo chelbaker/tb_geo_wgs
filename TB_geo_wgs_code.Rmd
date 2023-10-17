@@ -1,0 +1,91 @@
+---
+title: "TB geo wgs analysis"
+output: html_notebook
+---
+
+
+```{r}
+
+library(tidyverse)
+library(sf)
+library(phytools)
+library(mapdata)
+library(prettymapr)
+
+## Generic code for figure 8
+
+# read in data with sample IDs and corresponding GPS coordinates
+data <- read.csv("data.csv")
+# store coordinates (Y, X) with row names set to sample IDs
+data_yx <- data.frame(Y=data$Y, X=data$X, row.names = data$SampleID)
+
+# geographic boundary of study area
+map_sf <- st_read(dsn="map.shp", layer="map")
+map <- st_geometry(map_sf)
+# store coordinates
+lat_lon <- data.frame(st_coordinates(map))
+lon <- lat_lon$X
+lat <- lat_lon$Y
+
+# read in phylogenetic tree file (for example, tree generated using IQ Tree)
+tree <- read.tree("phylogenetictree.treedata")
+# (note tree must be rooted to work with mapping functions; if not rooted already, an option is to use midpoint root)
+tree_rt <- midpoint.root(tree)
+
+# option to subset out different groups
+group_sub <- data %>%
+  filter(group == "group_name")
+group_yx <- data.frame(Y=group_sub$Y, X=group_sub$X, row.names = group_sub$SampleID)
+group_tree <- keep.tip(tree_rt, group_sub$SampleID)
+
+```
+
+
+```{r}
+
+# create initial object for mapping
+# (regions="Botswana" can be replaced with region of interest)
+tree_obj <- phylo.to.map(tree_rt, data_yx, database="worldHires", regions="Botswana", direction="rightwards", plot=FALSE)
+
+# customize to study area if desired (using coordinates from study area map file)
+tree_obj$map$x <- lon
+tree_obj$map$y <- lat
+tree_obj$map$range<-c(range(lon),range(lat))
+
+
+# create initial object for mapping group subset
+group_tree_obj <- phylo.to.map(group_tree, group_yx, database="worldHires", regions="Botswana", direction="rightwards", plot=FALSE)
+
+# customize to study area
+group_tree_obj$map$x <- lon
+group_tree_obj$map$y <- lat
+group_tree_obj$map$range<-c(range(lon),range(lat))
+
+```
+
+
+```{r}
+
+# plot
+plot(tree_obj, type="phylogram", colors="grey", direction="rightwards", pts=TRUE, cex.points=c(0.7,1.5), fsize=0.75, split=c(0.5,0.5), rotate=TRUE)
+
+# plot group subset
+plot(group_tree_obj, type="phylogram", colors="grey", direction="rightwards", pts=TRUE, cex.points=c(0.7,1.5), fsize=0.75, split=c(0.5,0.5), rotate=TRUE)
+
+
+# customize plot, add scale bar and north arrow etc.
+plot(group_tree_obj, colors="#1F968BFF", type="phylogram", direction="rightwards", pts=TRUE, cex.points=c(0.7,1.5), split=c(0.2,0.8), ftype="off", fsize=0.75,rotate=TRUE)
+title("Title", line = -2.5, cex.main=1.5)
+addscalebar(plotunit = "latlon", widthhint = 0.25,
+unitcategory = "metric", htin = 0.2, padin = c(0.45, 0.25),
+style = "ticks", lwd = 1,
+linecol = "black", tick.cex = 0.5, labelpadin = 0.08, label.cex = 0.8,
+label.col = "black", pos = "bottomright")
+addnortharrow(pos = "bottomright", padin = c(1.2, 0.55), scale = 0.3,
+lwd = 1, border = "black", cols = c("white", "black"),
+text.col = "black")
+
+
+```
+
+
