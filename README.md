@@ -1,2 +1,2 @@
 # tb_geo_wgs
-TB genomic data geospatial analysis
+Code for analysis/figures in TB geospatial genomic manuscript
